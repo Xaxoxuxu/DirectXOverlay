@@ -8,23 +8,13 @@ void InitDraw(const bool& terminate)
 {
     DrawManager draw{ "Task Manager" };
 
-    const DrawManager::VERTEX triangleVertices[3]
-    {
-        {0.0f, 0.5f, 0.0f, D3DXCOLOR(1.0f, 0.0f, 0.0f, 1.0f)},
-        {0.45f, -0.5f, 0.0f, D3DXCOLOR(0.0f, 1.0f, 0.0f, 1.0f)},
-        {-0.45f, -0.5f, 0.0f, D3DXCOLOR(0.0f, 0.0f, 1.0f, 1.0f)}
-    };
-    const DrawManager::VERTEX triangleVertices2[3]
-    {
-        {0.0f, 1.0f, 0.0f, D3DXCOLOR(1.0f, 0.0f, 0.0f, 1.0f)},
-        {0.45f, -0.95f, 0.0f, D3DXCOLOR(0.0f, 1.0f, 0.0f, 1.0f)},
-        {-0.45f, -0.95f, 0.0f, D3DXCOLOR(0.0f, 0.0f, 1.0f, 1.0f)}
-    };
+    XMFLOAT2 posT1{ 300.0f, 300.0f };
+    XMFLOAT2 posT3{ posT1.x - 200.0f, 500.0f };
+    XMFLOAT2 posT2{ posT1.x + 200.0f, 500.0f };
 
     draw.SetCallback([&]
         {
-            //draw.DrawTriangle(triangleVertices);
-            //draw.DrawTriangle(triangleVertices2);
+            draw.DrawTriangle(posT1, posT2, posT3);
             draw.DrawLine(pos1, pos2);
         });
 

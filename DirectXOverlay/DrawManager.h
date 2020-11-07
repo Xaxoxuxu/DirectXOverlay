@@ -58,7 +58,7 @@ public:
     struct VERTEX { FLOAT x{}, y{}, z{}; D3DXCOLOR color; };
 
     void InitOverlay(const bool& terminate);
-    void DrawTriangle(const VERTEX triangleVertices[3]) const;
+    void DrawTriangle(XMFLOAT2 pos1, XMFLOAT2 pos2, XMFLOAT2 pos3) const;
     void DrawLine(XMFLOAT2 pos1, XMFLOAT2 pos2) const;
     void SetCallback(renderCallbackFn callback);
 };

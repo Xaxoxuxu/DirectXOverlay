@@ -260,15 +260,32 @@ void DrawManager::CleanD3D() const
 }
 
 // TODO: x y z vector, we dont care about the color so fuck those vertices
-void DrawManager::DrawTriangle(const VERTEX triangleVertices[3]) const
+void DrawManager::DrawTriangle(const XMFLOAT2 pos1, const XMFLOAT2 pos2, const XMFLOAT2 pos3) const
 {
+    UINT viewportNumber = 1;
+    D3D11_VIEWPORT vp;
+    this->m_devCon->RSGetViewports(&viewportNumber, &vp);
+
+    const float xx0 = 2.0f * (pos1.x - 0.5f) / vp.Width - 1.0f;
+    const float yy0 = 1.0f - 2.0f * (pos1.y - 0.5f) / vp.Height;
+    const float xx1 = 2.0f * (pos2.x - 0.5f) / vp.Width - 1.0f;
+    const float yy1 = 1.0f - 2.0f * (pos2.y - 0.5f) / vp.Height;
+    const float xx2 = 2.0f * (pos3.x - 0.5f) / vp.Width - 1.0f;
+    const float yy2 = 1.0f - 2.0f * (pos3.y - 0.5f) / vp.Height;
+
+    VERTEX vertices[3]
+    {
+        {xx0, yy0, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)},
+        {xx1, yy1, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)},
+        {xx2, yy2, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)}
+    };
+
     // copy the vertices into the buffer
     D3D11_MAPPED_SUBRESOURCE ms;
     m_devCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
-    memcpy(ms.pData, triangleVertices, sizeof(VERTEX) * 3);
+    memcpy(ms.pData, vertices, sizeof(vertices));
     m_devCon->Unmap(m_pVBuffer, NULL);
 
-    // select which primitive T we are using
     m_devCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     // draw the vertex buffer to the back buffer
@@ -298,7 +315,6 @@ void DrawManager::DrawLine(const XMFLOAT2 pos1, const XMFLOAT2 pos2) const
     memcpy(ms.pData, vertices, sizeof(vertices));
     m_devCon->Unmap(m_pVBuffer, NULL);
 
-    // select which primitive T we are using
     m_devCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP);
 
     // draw the vertex buffer to the back buffer
