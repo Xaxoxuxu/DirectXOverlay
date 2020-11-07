@@ -11,19 +11,15 @@
 #include <random>
 #include <chrono>
 #include <thread>
-#include <dwmapi.h>
+#include <DirectXMath.h>
 
 // include the Direct3D Library file
 #pragma comment (lib, "d3d11.lib")
 #pragma comment (lib, "d3dx11.lib")
 #pragma comment (lib, "d3dx10.lib")
-#pragma comment (lib, "Dwmapi.lib")
-
-// define the screen resolution TODO: fcking globals
-constexpr int SCREEN_WIDTH{ 800 };
-constexpr int SCREEN_HEIGHT{ 600 };
 
 using renderCallbackFn = std::function<void()>;
+using DirectX::XMFLOAT2;
 
 class DrawManager
 {
@@ -44,7 +40,7 @@ private:
     uint32_t m_overlayHeight{ 0 };
 
     void InitD3D();               // sets up and initializes Direct3D
-    void RenderFrame() const;     // renders a single frame
+    void RenderFrame();           // renders a single frame
     void CleanD3D() const;        // closes Direct3D and releases memory
     void InitPipeline();          // loads and prepares the shaders
     void Scale();
@@ -63,5 +59,6 @@ public:
 
     void InitOverlay(const bool& terminate);
     void DrawTriangle(const VERTEX triangleVertices[3]) const;
+    void DrawLine(XMFLOAT2 pos1, XMFLOAT2 pos2) const;
     void SetCallback(renderCallbackFn callback);
 };

@@ -61,19 +61,19 @@ void DrawManager::Scale()
 {
     static auto fix = [](long& in, uint32_t& out)
     {
-        if (in == 0) 
+        if (in == 0)
         {
             in++;
             out--;
         }
-        else 
+        else
         {
             in--;
             out++;
         }
     };
 
-    RECT props = GetWindowProps<RECT>(m_targetWindowHwnd);
+    RECT props{ GetWindowProps<RECT>(m_targetWindowHwnd) };
 
     m_overlayWidth = static_cast<uint32_t>(props.right);
     m_overlayHeight = static_cast<uint32_t>(props.bottom);
@@ -103,7 +103,7 @@ void DrawManager::InitWindow()
             'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
         };
-        constexpr static std::size_t num_chars = sizeof charset;
+        constexpr static std::size_t num_chars{ sizeof charset };
 
         static std::random_device rd;
         std::mt19937 gen(rd());
@@ -134,9 +134,6 @@ void DrawManager::InitWindow()
 
     RegisterClassEx(&wc);
 
-    //RECT wr = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
-    //AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
-
     m_windowHandle = CreateWindowEx(WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_LAYERED,
         className.c_str(),
         windowName.c_str(),
@@ -152,14 +149,10 @@ void DrawManager::InitWindow()
 
     Scale();
 
-    SetLayeredWindowAttributes(m_windowHandle, 0, 0, LWA_ALPHA);
-    SetLayeredWindowAttributes(m_windowHandle, 0, RGB(0, 0, 0), LWA_COLORKEY);
-
-    const auto margins = GetWindowProps<MARGINS>(m_windowHandle);
-    //DwmExtendFrameIntoClientArea(m_windowHandle, &margins);
+    SetLayeredWindowAttributes(m_windowHandle, 0, 255, LWA_ALPHA);
+    // SetLayeredWindowAttributes(m_windowHandle, 0, RGB(0, 0, 0), LWA_COLORKEY);
 
     ShowWindow(m_windowHandle, SW_SHOW);
-    //UpdateWindow(m_windowHandle);
 
     InitD3D();
 }
@@ -187,10 +180,10 @@ void DrawManager::InitD3D()
 
     scd.BufferCount = 1;                                   // one back buffer
     scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;    // use 32-bit color
-    scd.BufferDesc.Width = SCREEN_WIDTH;                   // set the back buffer width
-    scd.BufferDesc.Height = SCREEN_HEIGHT;                 // set the back buffer height
+    scd.BufferDesc.Width = m_overlayWidth;                 // set the back buffer width
+    scd.BufferDesc.Height = m_overlayHeight;               // set the back buffer height
     scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;     // how swap chain is to be used
-    scd.OutputWindow = m_windowHandle;                               // the window to be used
+    scd.OutputWindow = m_windowHandle;                     // the window to be used
     scd.SampleDesc.Count = 4;                              // how many multisamples
     scd.Windowed = TRUE;                                   // windowed/full-screen mode
     scd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;    // allow full-screen switching
@@ -226,8 +219,8 @@ void DrawManager::InitD3D()
 
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
-    viewport.Width = SCREEN_WIDTH;
-    viewport.Height = SCREEN_HEIGHT;
+    viewport.Width = static_cast<FLOAT>(m_overlayWidth);
+    viewport.Height = static_cast<FLOAT>(m_overlayHeight);
 
     m_devCon->RSSetViewports(1, &viewport);
 
@@ -235,10 +228,14 @@ void DrawManager::InitD3D()
 }
 
 // this is the function used to render a single frame
-void DrawManager::RenderFrame() const
+void DrawManager::RenderFrame()
 {
     if (m_callbackFn)
     {
+        m_devCon->ClearRenderTargetView(m_backBuffer, D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f));
+
+        Scale();
+
         m_callbackFn();
 
         // switch the back buffer and the front buffer
@@ -276,6 +273,36 @@ void DrawManager::DrawTriangle(const VERTEX triangleVertices[3]) const
 
     // draw the vertex buffer to the back buffer
     m_devCon->Draw(3, 0);
+}
+
+void DrawManager::DrawLine(const XMFLOAT2 pos1, const XMFLOAT2 pos2) const
+{
+    UINT viewportNumber = 1;
+    D3D11_VIEWPORT vp;
+    this->m_devCon->RSGetViewports(&viewportNumber, &vp);
+
+    const float xx0 = 2.0f * (pos1.x - 0.5f) / vp.Width - 1.0f;
+    const float yy0 = 1.0f - 2.0f * (pos1.y - 0.5f) / vp.Height;
+    const float xx1 = 2.0f * (pos2.x - 0.5f) / vp.Width - 1.0f;
+    const float yy1 = 1.0f - 2.0f * (pos2.y - 0.5f) / vp.Height;
+
+    VERTEX vertices[2]
+    {
+        {xx0, yy0, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)},
+        {xx1, yy1, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)}
+    };
+
+    // copy the vertices into the buffer
+    D3D11_MAPPED_SUBRESOURCE ms;
+    m_devCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
+    memcpy(ms.pData, vertices, sizeof(vertices));
+    m_devCon->Unmap(m_pVBuffer, NULL);
+
+    // select which primitive T we are using
+    m_devCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP);
+
+    // draw the vertex buffer to the back buffer
+    m_devCon->Draw(2, 0);
 }
 
 void DrawManager::SetCallback(renderCallbackFn callback)
