@@ -1,11 +1,16 @@
 #include "DrawManager.h"
 
-void DrawManager::InitOverlay()
+DrawManager::DrawManager(const std::string &windowToOverlayName)
+{
+    this->m_windowToOverlayName = windowToOverlayName;
+}
+
+void DrawManager::InitOverlay(const bool& terminate)
 {
     InitWindow();
 
     MSG msg;
-    while (TRUE)
+    while (!terminate)
     {
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
@@ -17,6 +22,7 @@ void DrawManager::InitOverlay()
         }
 
         RenderFrame();
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 
     CleanD3D();
@@ -24,6 +30,34 @@ void DrawManager::InitOverlay()
 
 void DrawManager::InitWindow()
 {
+    const auto randomString = [](const std::size_t length)
+    {
+        constexpr static char charset[]
+        {
+            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+            'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+            'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+        };
+        constexpr static std::size_t num_chars = sizeof charset;
+
+        static std::random_device rd;
+        std::mt19937 gen(rd());
+        const std::uniform_int_distribution<std::size_t> engine(std::numeric_limits<std::size_t>::min(), num_chars - 1);
+
+        std::string str(length, '\0');
+        for (auto& c : str)
+        {
+            c = charset[engine(gen)];
+        }
+
+        return str;
+    };
+
+    const std::string className{ randomString(32) };
+    const std::string windowName{ randomString(64) };
+
     HWND hWnd;
     WNDCLASSEX wc;
 
@@ -34,7 +68,7 @@ void DrawManager::InitWindow()
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = GetModuleHandle(nullptr);
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    wc.lpszClassName = L"WindowClass";
+    wc.lpszClassName = className.c_str();
 
     RegisterClassEx(&wc);
 
@@ -42,8 +76,8 @@ void DrawManager::InitWindow()
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
     hWnd = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED,
-        L"WindowClass",
-        L"Our First Direct3D Program",
+        className.c_str(),
+        windowName.c_str(),
         WS_POPUP,
         300,
         300,
@@ -159,6 +193,7 @@ void DrawManager::CleanD3D() const
     m_devCon->Release();
 }
 
+// TODO: x y z vector, we dont care about the color so fuck those vertices
 void DrawManager::DrawTriangle(const VERTEX triangleVertices[3]) const
 {
     // copy the vertices into the buffer
@@ -187,8 +222,8 @@ void DrawManager::InitPipeline()
 {
     // load and compile the two shaders
     ID3D10Blob* VS, * PS;
-    D3DX11CompileFromFile(L"shaders.shader", nullptr, nullptr, "VShader", "vs_4_0", 0, 0, nullptr, &VS, nullptr, nullptr);
-    D3DX11CompileFromFile(L"shaders.shader", nullptr, nullptr, "PShader", "ps_4_0", 0, 0, nullptr, &PS, nullptr, nullptr);
+    D3DX11CompileFromFile("shaders.shader", nullptr, nullptr, "VShader", "vs_4_0", 0, 0, nullptr, &VS, nullptr, nullptr);
+    D3DX11CompileFromFile("shaders.shader", nullptr, nullptr, "PShader", "ps_4_0", 0, 0, nullptr, &PS, nullptr, nullptr);
 
     // encapsulate both shaders into shader objects
     m_dev->CreateVertexShader(VS->GetBufferPointer(), VS->GetBufferSize(), nullptr, &m_pVS);

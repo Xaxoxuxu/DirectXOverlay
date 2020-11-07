@@ -1,11 +1,16 @@
 // include the basic windows header files and the Direct3D header files
 #pragma once
+
+#define NOMINMAX 
 #include <windows.h>
 #include <windowsx.h>
 #include <D3D11.h>
 #include <D3DX11.h>
 #include <D3DX10.h>
 #include <functional>
+#include <random>
+#include <chrono>
+#include <thread>
 
 // include the Direct3D Library file
 #pragma comment (lib, "d3d11.lib")
@@ -31,21 +36,24 @@ private:
     ID3D11Buffer* m_pVBuffer = nullptr;                // the pointer to the vertex buffer
 
     renderCallbackFn m_callbackFn;
+    std::string m_windowToOverlayName;
 
     void InitD3D(HWND hWnd);    // sets up and initializes Direct3D
     void RenderFrame() const;     // renders a single frame
     void CleanD3D() const;        // closes Direct3D and releases memory
     void InitPipeline();    // loads and prepares the shaders
-    void InitWindow();
+    void InitWindow();  // initializes window and message loop
 
     // the WindowProc function prototype
     static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 public:
-    // a struct to define a single vertex
-    struct VERTEX { FLOAT X{}, Y{}, Z{}; D3DXCOLOR Color; };
+    DrawManager(const std::string& windowToOverlayName);
 
-    void InitOverlay();
+    // a struct to define a single vertex
+    struct VERTEX { FLOAT x{}, y{}, z{}; D3DXCOLOR color; };
+
+    void InitOverlay(const bool &terminate);
     void DrawTriangle(const VERTEX triangleVertices[3]) const;
     void SetCallback(renderCallbackFn callback);
 };
