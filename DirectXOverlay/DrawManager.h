@@ -11,13 +11,15 @@
 #include <random>
 #include <chrono>
 #include <thread>
+#include <dwmapi.h>
 
 // include the Direct3D Library file
 #pragma comment (lib, "d3d11.lib")
 #pragma comment (lib, "d3dx11.lib")
 #pragma comment (lib, "d3dx10.lib")
+#pragma comment (lib, "Dwmapi.lib")
 
-// define the screen resolution
+// define the screen resolution TODO: fcking globals
 constexpr int SCREEN_WIDTH{ 800 };
 constexpr int SCREEN_HEIGHT{ 600 };
 
@@ -26,23 +28,29 @@ using renderCallbackFn = std::function<void()>;
 class DrawManager
 {
 private:
-    IDXGISwapChain* m_swapChain = nullptr;             // the pointer to the swap chain interface
-    ID3D11Device* m_dev = nullptr;                     // the pointer to our Direct3D device interface
-    ID3D11DeviceContext* m_devCon = nullptr;           // the pointer to our Direct3D device context
-    ID3D11RenderTargetView* m_backBuffer = nullptr;    // the pointer to our back buffer
-    ID3D11InputLayout* m_pLayout = nullptr;            // the pointer to the input layout
-    ID3D11VertexShader* m_pVS = nullptr;               // the pointer to the vertex shader
-    ID3D11PixelShader* m_pPS = nullptr;                // the pointer to the pixel shader
-    ID3D11Buffer* m_pVBuffer = nullptr;                // the pointer to the vertex buffer
+    IDXGISwapChain* m_swapChain{ nullptr };             // the pointer to the swap chain interface
+    ID3D11Device* m_dev{ nullptr };                     // the pointer to our Direct3D device interface
+    ID3D11DeviceContext* m_devCon{ nullptr };           // the pointer to our Direct3D device context
+    ID3D11RenderTargetView* m_backBuffer{ nullptr };    // the pointer to our back buffer
+    ID3D11InputLayout* m_pLayout{ nullptr };            // the pointer to the input layout
+    ID3D11VertexShader* m_pVS{ nullptr };               // the pointer to the vertex shader
+    ID3D11PixelShader* m_pPS{ nullptr };                // the pointer to the pixel shader
+    ID3D11Buffer* m_pVBuffer{ nullptr };                // the pointer to the vertex buffer
 
-    renderCallbackFn m_callbackFn;
-    std::string m_windowToOverlayName;
+    renderCallbackFn m_callbackFn{ nullptr };
+    HWND m_windowHandle{ nullptr };
+    HWND m_targetWindowHwnd{ nullptr };
+    uint32_t m_overlayWidth{ 0 };
+    uint32_t m_overlayHeight{ 0 };
 
-    void InitD3D(HWND hWnd);    // sets up and initializes Direct3D
+    void InitD3D();               // sets up and initializes Direct3D
     void RenderFrame() const;     // renders a single frame
     void CleanD3D() const;        // closes Direct3D and releases memory
-    void InitPipeline();    // loads and prepares the shaders
-    void InitWindow();  // initializes window and message loop
+    void InitPipeline();          // loads and prepares the shaders
+    void Scale();
+    void InitWindow();            // initializes window and message loop
+    template<typename T = RECT>
+    static T GetWindowProps(HWND hWnd);
 
     // the WindowProc function prototype
     static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -53,7 +61,7 @@ public:
     // a struct to define a single vertex
     struct VERTEX { FLOAT x{}, y{}, z{}; D3DXCOLOR color; };
 
-    void InitOverlay(const bool &terminate);
+    void InitOverlay(const bool& terminate);
     void DrawTriangle(const VERTEX triangleVertices[3]) const;
     void SetCallback(renderCallbackFn callback);
 };

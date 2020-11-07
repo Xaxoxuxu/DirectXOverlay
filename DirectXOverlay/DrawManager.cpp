@@ -1,8 +1,13 @@
 #include "DrawManager.h"
 
-DrawManager::DrawManager(const std::string &windowToOverlayName)
+DrawManager::DrawManager(const std::string& windowToOverlayName)
 {
-    this->m_windowToOverlayName = windowToOverlayName;
+    const HWND tempHandle{ FindWindow(nullptr, windowToOverlayName.c_str()) };
+    if (!tempHandle)
+    {
+        throw std::exception("Cannot find target window");
+    }
+    this->m_targetWindowHwnd = tempHandle;
 }
 
 void DrawManager::InitOverlay(const bool& terminate)
@@ -26,6 +31,64 @@ void DrawManager::InitOverlay(const bool& terminate)
     }
 
     CleanD3D();
+}
+
+template<typename T>
+T DrawManager::GetWindowProps(const HWND hWnd)
+{
+    if (!hWnd)
+    {
+        throw std::exception("Invalid window handle");
+    }
+
+    RECT client{}, window{};
+    GetClientRect(hWnd, &client);
+    GetWindowRect(hWnd, &window);
+
+    POINT diff{};
+    ClientToScreen(hWnd, &diff);
+
+    return
+    {
+        window.left + (diff.x - window.left),
+        window.top + (diff.y - window.top),
+        client.right,
+        client.bottom
+    };
+}
+
+void DrawManager::Scale()
+{
+    static auto fix = [](long& in, uint32_t& out)
+    {
+        if (in == 0) 
+        {
+            in++;
+            out--;
+        }
+        else 
+        {
+            in--;
+            out++;
+        }
+    };
+
+    RECT props = GetWindowProps<RECT>(m_targetWindowHwnd);
+
+    m_overlayWidth = static_cast<uint32_t>(props.right);
+    m_overlayHeight = static_cast<uint32_t>(props.bottom);
+
+    fix(props.left, m_overlayWidth);
+    fix(props.top, m_overlayHeight);
+
+    MoveWindow(
+        m_windowHandle,
+        props.left,
+        props.top,
+        static_cast<int32_t>(m_overlayWidth),
+        static_cast<int32_t>(m_overlayHeight),
+        1
+    );
 }
 
 void DrawManager::InitWindow()
@@ -58,7 +121,6 @@ void DrawManager::InitWindow()
     const std::string className{ randomString(32) };
     const std::string windowName{ randomString(64) };
 
-    HWND hWnd;
     WNDCLASSEX wc;
 
     ZeroMemory(&wc, sizeof(WNDCLASSEX));
@@ -72,27 +134,34 @@ void DrawManager::InitWindow()
 
     RegisterClassEx(&wc);
 
-    RECT wr = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
-    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
+    //RECT wr = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
+    //AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
-    hWnd = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED,
+    m_windowHandle = CreateWindowEx(WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_LAYERED,
         className.c_str(),
         windowName.c_str(),
         WS_POPUP,
-        300,
-        300,
-        wr.right - wr.left,
-        wr.bottom - wr.top,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        800,
+        600,
         nullptr,
         nullptr,
         GetModuleHandle(nullptr),
         nullptr);
 
-    SetLayeredWindowAttributes(hWnd, 0, 0, LWA_ALPHA);
-    SetLayeredWindowAttributes(hWnd, 0, RGB(0, 0, 0), LWA_COLORKEY);
-    ShowWindow(hWnd, SW_SHOW);
+    Scale();
 
-    InitD3D(hWnd);
+    SetLayeredWindowAttributes(m_windowHandle, 0, 0, LWA_ALPHA);
+    SetLayeredWindowAttributes(m_windowHandle, 0, RGB(0, 0, 0), LWA_COLORKEY);
+
+    const auto margins = GetWindowProps<MARGINS>(m_windowHandle);
+    //DwmExtendFrameIntoClientArea(m_windowHandle, &margins);
+
+    ShowWindow(m_windowHandle, SW_SHOW);
+    //UpdateWindow(m_windowHandle);
+
+    InitD3D();
 }
 
 LRESULT CALLBACK DrawManager::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -109,7 +178,7 @@ LRESULT CALLBACK DrawManager::WindowProc(HWND hWnd, UINT message, WPARAM wParam,
     return DefWindowProc(hWnd, message, wParam, lParam);
 }
 
-void DrawManager::InitD3D(HWND hWnd)
+void DrawManager::InitD3D()
 {
     // create a struct to hold information about the swap chain
     DXGI_SWAP_CHAIN_DESC scd;
@@ -121,7 +190,7 @@ void DrawManager::InitD3D(HWND hWnd)
     scd.BufferDesc.Width = SCREEN_WIDTH;                   // set the back buffer width
     scd.BufferDesc.Height = SCREEN_HEIGHT;                 // set the back buffer height
     scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;     // how swap chain is to be used
-    scd.OutputWindow = hWnd;                               // the window to be used
+    scd.OutputWindow = m_windowHandle;                               // the window to be used
     scd.SampleDesc.Count = 4;                              // how many multisamples
     scd.Windowed = TRUE;                                   // windowed/full-screen mode
     scd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;    // allow full-screen switching
@@ -202,7 +271,7 @@ void DrawManager::DrawTriangle(const VERTEX triangleVertices[3]) const
     memcpy(ms.pData, triangleVertices, sizeof(VERTEX) * 3);
     m_devCon->Unmap(m_pVBuffer, NULL);
 
-    // select which primitive type we are using
+    // select which primitive T we are using
     m_devCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     // draw the vertex buffer to the back buffer
