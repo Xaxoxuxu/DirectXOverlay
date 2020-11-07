@@ -12,10 +12,17 @@ void InitDraw(const bool& terminate)
     XMFLOAT2 posT3{ posT1.x - 200.0f, 500.0f };
     XMFLOAT2 posT2{ posT1.x + 200.0f, 500.0f };
 
+
+    XMFLOAT2 posB1{ 500.0f, 500.0f };
+    XMFLOAT2 posB2{ 500.0f + 100.0f, 500.0f };
+    XMFLOAT2 posB3{ 500.0f + 100.0f, 500.0f + 100.0f };
+    XMFLOAT2 posB4{ 500.0f, 500.0f + 100.0f };
+
     draw.SetCallback([&]
         {
             draw.DrawTriangle(posT1, posT2, posT3);
             draw.DrawLine(pos1, pos2);
+            draw.DrawBorderBox(posB1, posB2, posB3, posB4);
         });
 
     draw.InitOverlay(terminate);
@@ -57,7 +64,7 @@ int main()
             break;
         }
 
-        printf("pos1[%f;%f] - pos2[%f;%f]\n", pos1.x, pos1.y, pos2.x, pos2.y);
+        printf("pos1[%f:%f] - pos2[%f:%f]\n", pos1.x, pos1.y, pos2.x, pos2.y);
     }
 
     terminate = true;

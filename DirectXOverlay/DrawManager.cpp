@@ -262,18 +262,20 @@ void DrawManager::CleanD3D() const
 // TODO: x y z vector, we dont care about the color so fuck those vertices
 void DrawManager::DrawTriangle(const XMFLOAT2 pos1, const XMFLOAT2 pos2, const XMFLOAT2 pos3) const
 {
-    UINT viewportNumber = 1;
+    // TODO: reuse logic
+    UINT viewportNumber{ 1 };
     D3D11_VIEWPORT vp;
     this->m_devCon->RSGetViewports(&viewportNumber, &vp);
 
-    const float xx0 = 2.0f * (pos1.x - 0.5f) / vp.Width - 1.0f;
-    const float yy0 = 1.0f - 2.0f * (pos1.y - 0.5f) / vp.Height;
-    const float xx1 = 2.0f * (pos2.x - 0.5f) / vp.Width - 1.0f;
-    const float yy1 = 1.0f - 2.0f * (pos2.y - 0.5f) / vp.Height;
-    const float xx2 = 2.0f * (pos3.x - 0.5f) / vp.Width - 1.0f;
-    const float yy2 = 1.0f - 2.0f * (pos3.y - 0.5f) / vp.Height;
+    // TODO: reuse logic
+    const float xx0{ 2.0f * (pos1.x - 0.5f) / vp.Width - 1.0f };
+    const float yy0{ 1.0f - 2.0f * (pos1.y - 0.5f) / vp.Height };
+    const float xx1{ 2.0f * (pos2.x - 0.5f) / vp.Width - 1.0f };
+    const float yy1{ 1.0f - 2.0f * (pos2.y - 0.5f) / vp.Height };
+    const float xx2{ 2.0f * (pos3.x - 0.5f) / vp.Width - 1.0f };
+    const float yy2{ 1.0f - 2.0f * (pos3.y - 0.5f) / vp.Height };
 
-    VERTEX vertices[3]
+    const VERTEX vertices[3]
     {
         {xx0, yy0, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)},
         {xx1, yy1, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)},
@@ -294,16 +296,18 @@ void DrawManager::DrawTriangle(const XMFLOAT2 pos1, const XMFLOAT2 pos2, const X
 
 void DrawManager::DrawLine(const XMFLOAT2 pos1, const XMFLOAT2 pos2) const
 {
-    UINT viewportNumber = 1;
+    // TODO: reuse logic
+    UINT viewportNumber{ 1 };
     D3D11_VIEWPORT vp;
     this->m_devCon->RSGetViewports(&viewportNumber, &vp);
 
-    const float xx0 = 2.0f * (pos1.x - 0.5f) / vp.Width - 1.0f;
-    const float yy0 = 1.0f - 2.0f * (pos1.y - 0.5f) / vp.Height;
-    const float xx1 = 2.0f * (pos2.x - 0.5f) / vp.Width - 1.0f;
-    const float yy1 = 1.0f - 2.0f * (pos2.y - 0.5f) / vp.Height;
+    // TODO: reuse logic
+    const float xx0{ 2.0f * (pos1.x - 0.5f) / vp.Width - 1.0f };
+    const float yy0{ 1.0f - 2.0f * (pos1.y - 0.5f) / vp.Height };
+    const float xx1{ 2.0f * (pos2.x - 0.5f) / vp.Width - 1.0f };
+    const float yy1{ 1.0f - 2.0f * (pos2.y - 0.5f) / vp.Height };
 
-    VERTEX vertices[2]
+    const VERTEX vertices[2]
     {
         {xx0, yy0, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)},
         {xx1, yy1, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)}
@@ -315,10 +319,18 @@ void DrawManager::DrawLine(const XMFLOAT2 pos1, const XMFLOAT2 pos2) const
     memcpy(ms.pData, vertices, sizeof(vertices));
     m_devCon->Unmap(m_pVBuffer, NULL);
 
-    m_devCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP);
+    m_devCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINELIST);
 
     // draw the vertex buffer to the back buffer
     m_devCon->Draw(2, 0);
+}
+
+void DrawManager::DrawBorderBox(XMFLOAT2 topLeft, XMFLOAT2 topRight, XMFLOAT2 botRight, XMFLOAT2 BotLeft) const
+{
+    DrawLine(topLeft, topRight);
+    DrawLine(topRight, botRight);
+    DrawLine(botRight, BotLeft);
+    DrawLine(BotLeft, topLeft);
 }
 
 void DrawManager::SetCallback(renderCallbackFn callback)
