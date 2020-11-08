@@ -60,7 +60,7 @@ public:
 
     void InitOverlay(const bool& terminate);
     void DrawTriangle(const XMFLOAT2 &point1, const XMFLOAT2 &point2, const XMFLOAT2 &point3) const;
-    void DrawLine(XMFLOAT2 point1, XMFLOAT2 point2) const;
-    void DrawBorderBox(XMFLOAT2 topLeft, XMFLOAT2 topRight, XMFLOAT2 botRight, XMFLOAT2 BotLeft) const;
+    void DrawLine(const XMFLOAT2 &point1, const XMFLOAT2 &point2) const;
+    void DrawBorderBox(const XMFLOAT2 &topLeft, const XMFLOAT2 &topRight, const XMFLOAT2 &botRight, const XMFLOAT2 &botLeft) const;
     void SetCallback(renderCallbackFn callback);
 };

@@ -303,7 +303,7 @@ void DrawManager::DrawTriangle(const XMFLOAT2& point1, const XMFLOAT2& point2, c
     m_pDevCon->Draw(pointsCount, 0);
 }
 
-void DrawManager::DrawLine(const XMFLOAT2 point1, const XMFLOAT2 point2) const
+void DrawManager::DrawLine(const XMFLOAT2 &point1, const XMFLOAT2 &point2) const
 {
     constexpr int pointsCount{ 2 };
 
@@ -333,16 +333,16 @@ void DrawManager::DrawLine(const XMFLOAT2 point1, const XMFLOAT2 point2) const
     m_pDevCon->Draw(pointsCount, 0);
 }
 
-void DrawManager::DrawBorderBox(XMFLOAT2 topLeft, XMFLOAT2 topRight, XMFLOAT2 botRight, XMFLOAT2 BotLeft) const
+void DrawManager::DrawBorderBox(const XMFLOAT2 &topLeft, const XMFLOAT2 &topRight, const XMFLOAT2 &botRight, const XMFLOAT2 &botLeft) const
 {
     //TODO: it's clean but is it optimal?
     DrawLine(topLeft, topRight);
     DrawLine(topRight, botRight);
-    DrawLine(botRight, BotLeft);
-    DrawLine(BotLeft, topLeft);
+    DrawLine(botRight, botLeft);
+    DrawLine(botLeft, topLeft);
 }
 
-void DrawManager::SetCallback(renderCallbackFn callback)
+void DrawManager::SetCallback(const renderCallbackFn callback)
 {
     if (callback)
     {
