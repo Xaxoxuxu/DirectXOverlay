@@ -64,5 +64,6 @@ public:
     void DrawTriangle(const XMFLOAT2 &point1, const XMFLOAT2 &point2, const XMFLOAT2 &point3) const;
     void DrawLine(const XMFLOAT2 &point1, const XMFLOAT2 &point2) const;
     void DrawBorderBox(const XMFLOAT2 &topLeft, const XMFLOAT2 &topRight, const XMFLOAT2 &botRight, const XMFLOAT2 &botLeft) const;
+    void DrawCircle(const XMFLOAT2& centerPoint, int radius, int numSides) const;
     void SetCallback(renderCallbackFn callback);
 };

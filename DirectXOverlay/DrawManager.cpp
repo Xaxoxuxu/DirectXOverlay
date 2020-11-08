@@ -27,8 +27,8 @@ void DrawManager::InitOverlay(const bool& terminate)
         }
 
         RenderFrame();
-        //TODO: adjust
-        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        //TODO: adjust, but overall a higher value is better because we get ingame fps drops
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     CleanD3D();
@@ -304,7 +304,7 @@ void DrawManager::DrawTriangle(const XMFLOAT2& point1, const XMFLOAT2& point2, c
     m_pDevCon->Draw(pointsCount, 0);
 }
 
-void DrawManager::DrawLine(const XMFLOAT2 &point1, const XMFLOAT2 &point2) const
+void DrawManager::DrawLine(const XMFLOAT2& point1, const XMFLOAT2& point2) const
 {
     constexpr int pointsCount{ 2 };
 
@@ -334,13 +334,47 @@ void DrawManager::DrawLine(const XMFLOAT2 &point1, const XMFLOAT2 &point2) const
     m_pDevCon->Draw(pointsCount, 0);
 }
 
-void DrawManager::DrawBorderBox(const XMFLOAT2 &topLeft, const XMFLOAT2 &topRight, const XMFLOAT2 &botRight, const XMFLOAT2 &botLeft) const
+void DrawManager::DrawBorderBox(const XMFLOAT2& topLeft, const XMFLOAT2& topRight, const XMFLOAT2& botRight, const XMFLOAT2& botLeft) const
 {
     //TODO: it's clean but is it optimal?
     DrawLine(topLeft, topRight);
     DrawLine(topRight, botRight);
     DrawLine(botRight, botLeft);
     DrawLine(botLeft, topLeft);
+}
+
+void DrawManager::DrawCircle(const XMFLOAT2& centerPoint, int radius, int numSides) const
+{
+    constexpr int numPoints{ 30 };
+    UINT viewportNumber{ 1 };
+    D3D11_VIEWPORT vp;
+    this->m_pDevCon->RSGetViewports(&viewportNumber, &vp);
+
+    const auto color{ D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f) };
+    VERTEX* v{ nullptr };
+
+    D3D11_MAPPED_SUBRESOURCE mapData;
+    this->m_pDevCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &mapData);
+
+    v = static_cast<VERTEX*>(mapData.pData);
+
+    const auto wedgeAngle {static_cast<float>((2 * D3DX_PI) / numPoints)};
+
+    for (int i = 0; i <= numPoints; i++)
+    {
+        const auto theta{ static_cast<float>(i * wedgeAngle) };
+        const auto x{ static_cast<float>(centerPoint.x + radius * cos(theta)) };
+        const auto y{ static_cast<float>(centerPoint.y - radius * sin(theta)) };
+
+        v[i].x = 2.0f * (x - 0.5f) / vp.Width - 1.0f;
+        v[i].y = 1.0f - 2.0f * (y - 0.5f) / vp.Height;
+        v[i].z = 0.0f;
+        v[i].color = color;
+    }
+
+    this->m_pDevCon->Unmap(m_pVBuffer, NULL);
+    this->m_pDevCon->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP);
+    this->m_pDevCon->Draw(numPoints + 1, 0);
 }
 
 void DrawManager::SetCallback(renderCallbackFn callback)
@@ -357,9 +391,9 @@ void DrawManager::InitPipeline()
     // load and compile the two shaders
     ID3D10Blob* VS, * PS;
     D3DX11CompileFromMemory(VertexShader, sizeof(VertexShader), nullptr, nullptr, nullptr, "VS", "vs_4_0",
-                            D3DCOMPILE_ENABLE_STRICTNESS, 0, nullptr, &VS, nullptr, nullptr);
+        D3DCOMPILE_ENABLE_STRICTNESS, 0, nullptr, &VS, nullptr, nullptr);
     D3DX11CompileFromMemory(PixelShader, sizeof(PixelShader), nullptr, nullptr, nullptr, "PS", "ps_4_0",
-                            D3DCOMPILE_ENABLE_STRICTNESS, 0, nullptr, &PS, nullptr, nullptr);
+        D3DCOMPILE_ENABLE_STRICTNESS, 0, nullptr, &PS, nullptr, nullptr);
 
     // encapsulate both shaders into shader objects
     m_pDev->CreateVertexShader(VS->GetBufferPointer(), VS->GetBufferSize(), nullptr, &m_pVS);
@@ -384,7 +418,7 @@ void DrawManager::InitPipeline()
     ZeroMemory(&bd, sizeof(bd));
 
     bd.Usage = D3D11_USAGE_DYNAMIC;                // write access access by CPU and GPU
-    bd.ByteWidth = sizeof(VERTEX) * 300;           // size is the VERTEX struct * 300?
+    bd.ByteWidth = sizeof(VERTEX) * 1000;          // ?
     bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;       // use as a vertex buffer
     bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;    // allow CPU to write in buffer
 

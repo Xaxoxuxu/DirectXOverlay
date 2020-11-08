@@ -22,6 +22,7 @@ void InitDraw(const bool& terminate)
             draw.DrawTriangle(posT1, posT2, posT3);
             draw.DrawLine(pos1, pos2);
             draw.DrawBorderBox(posB1, posB2, posB3, posB4);
+            draw.DrawCircle({ 600.0f, 600.0f }, 50.0f, 20);
         });
 
     draw.InitOverlay(terminate);
