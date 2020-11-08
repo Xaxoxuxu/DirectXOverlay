@@ -1,7 +1,7 @@
 // include the basic windows header files and the Direct3D header files
 #pragma once
 
-#define NOMINMAX 
+#define NOMINMAX // right before windows.h so we get rid of the annoying min max macros
 #include <windows.h>
 #include <windowsx.h>
 #include <D3D11.h>
@@ -24,10 +24,10 @@ using DirectX::XMFLOAT2;
 class DrawManager
 {
 private:
-    IDXGISwapChain* m_swapChain{ nullptr };             // the pointer to the swap chain interface
-    ID3D11Device* m_dev{ nullptr };                     // the pointer to our Direct3D device interface
-    ID3D11DeviceContext* m_devCon{ nullptr };           // the pointer to our Direct3D device context
-    ID3D11RenderTargetView* m_backBuffer{ nullptr };    // the pointer to our back buffer
+    IDXGISwapChain* m_pSwapChain{ nullptr };             // the pointer to the swap chain interface
+    ID3D11Device* m_pDev{ nullptr };                     // the pointer to our Direct3D device interface
+    ID3D11DeviceContext* m_pDevCon{ nullptr };           // the pointer to our Direct3D device context
+    ID3D11RenderTargetView* m_pBackBuffer{ nullptr };    // the pointer to our back buffer
     ID3D11InputLayout* m_pLayout{ nullptr };            // the pointer to the input layout
     ID3D11VertexShader* m_pVS{ nullptr };               // the pointer to the vertex shader
     ID3D11PixelShader* m_pPS{ nullptr };                // the pointer to the pixel shader
@@ -45,6 +45,7 @@ private:
     void InitPipeline();          // loads and prepares the shaders
     void Scale();
     void InitWindow();            // initializes window and message loop
+    void TransformCoords(XMFLOAT2 coords[], size_t count) const;
     template<typename T = RECT>
     static T GetWindowProps(HWND hWnd);
 
@@ -58,8 +59,8 @@ public:
     struct VERTEX { FLOAT x{}, y{}, z{}; D3DXCOLOR color; };
 
     void InitOverlay(const bool& terminate);
-    void DrawTriangle(XMFLOAT2 pos1, XMFLOAT2 pos2, XMFLOAT2 pos3) const;
-    void DrawLine(XMFLOAT2 pos1, XMFLOAT2 pos2) const;
+    void DrawTriangle(const XMFLOAT2 &point1, const XMFLOAT2 &point2, const XMFLOAT2 &point3) const;
+    void DrawLine(XMFLOAT2 point1, XMFLOAT2 point2) const;
     void DrawBorderBox(XMFLOAT2 topLeft, XMFLOAT2 topRight, XMFLOAT2 botRight, XMFLOAT2 BotLeft) const;
     void SetCallback(renderCallbackFn callback);
 };

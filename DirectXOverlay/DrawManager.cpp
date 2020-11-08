@@ -150,7 +150,7 @@ void DrawManager::InitWindow()
     Scale();
 
     SetLayeredWindowAttributes(m_windowHandle, 0, 255, LWA_ALPHA);
-    // SetLayeredWindowAttributes(m_windowHandle, 0, RGB(0, 0, 0), LWA_COLORKEY);
+    SetLayeredWindowAttributes(m_windowHandle, 0, RGB(0, 0, 0), LWA_COLORKEY);
 
     ShowWindow(m_windowHandle, SW_SHOW);
 
@@ -197,21 +197,21 @@ void DrawManager::InitD3D()
         NULL,
         D3D11_SDK_VERSION,
         &scd,
-        &m_swapChain,
-        &m_dev,
+        &m_pSwapChain,
+        &m_pDev,
         nullptr,
-        &m_devCon);
+        &m_pDevCon);
 
     // get the address of the back buffer
     ID3D11Texture2D* pBackBuffer;
-    m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer));
+    m_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer));
 
     // use the back buffer address to create the render target
-    m_dev->CreateRenderTargetView(pBackBuffer, nullptr, &m_backBuffer);
+    m_pDev->CreateRenderTargetView(pBackBuffer, nullptr, &m_pBackBuffer);
     pBackBuffer->Release();
 
     // set the render target as the back buffer
-    m_devCon->OMSetRenderTargets(1, &m_backBuffer, nullptr);
+    m_pDevCon->OMSetRenderTargets(1, &m_pBackBuffer, nullptr);
 
     // Set the viewport
     D3D11_VIEWPORT viewport;
@@ -222,7 +222,7 @@ void DrawManager::InitD3D()
     viewport.Width = static_cast<FLOAT>(m_overlayWidth);
     viewport.Height = static_cast<FLOAT>(m_overlayHeight);
 
-    m_devCon->RSSetViewports(1, &viewport);
+    m_pDevCon->RSSetViewports(1, &viewport);
 
     InitPipeline();
 }
@@ -232,101 +232,110 @@ void DrawManager::RenderFrame()
 {
     if (m_callbackFn)
     {
-        m_devCon->ClearRenderTargetView(m_backBuffer, D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f));
+        m_pDevCon->ClearRenderTargetView(m_pBackBuffer, D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f));
 
         Scale();
 
         m_callbackFn();
 
         // switch the back buffer and the front buffer
-        m_swapChain->Present(0, 0);
+        m_pSwapChain->Present(0, 0);
     }
 }
 
 // this is the function that cleans up Direct3D and COM
 void DrawManager::CleanD3D() const
 {
-    m_swapChain->SetFullscreenState(FALSE, nullptr);    // switch to windowed mode
+    m_pSwapChain->SetFullscreenState(FALSE, nullptr);    // switch to windowed mode
 
     // close and release all existing COM objects
     m_pLayout->Release();
     m_pVS->Release();
     m_pPS->Release();
     m_pVBuffer->Release();
-    m_swapChain->Release();
-    m_backBuffer->Release();
-    m_dev->Release();
-    m_devCon->Release();
+    m_pSwapChain->Release();
+    m_pBackBuffer->Release();
+    m_pDev->Release();
+    m_pDevCon->Release();
 }
 
-// TODO: x y z vector, we dont care about the color so fuck those vertices
-void DrawManager::DrawTriangle(const XMFLOAT2 pos1, const XMFLOAT2 pos2, const XMFLOAT2 pos3) const
+void DrawManager::TransformCoords(XMFLOAT2 coords[], size_t count) const
 {
-    // TODO: reuse logic
     UINT viewportNumber{ 1 };
     D3D11_VIEWPORT vp;
-    this->m_devCon->RSGetViewports(&viewportNumber, &vp);
+    this->m_pDevCon->RSGetViewports(&viewportNumber, &vp);
 
-    // TODO: reuse logic
-    const float xx0{ 2.0f * (pos1.x - 0.5f) / vp.Width - 1.0f };
-    const float yy0{ 1.0f - 2.0f * (pos1.y - 0.5f) / vp.Height };
-    const float xx1{ 2.0f * (pos2.x - 0.5f) / vp.Width - 1.0f };
-    const float yy1{ 1.0f - 2.0f * (pos2.y - 0.5f) / vp.Height };
-    const float xx2{ 2.0f * (pos3.x - 0.5f) / vp.Width - 1.0f };
-    const float yy2{ 1.0f - 2.0f * (pos3.y - 0.5f) / vp.Height };
-
-    const VERTEX vertices[3]
+    for (size_t i{ 0 }; i < count; i++)
     {
-        {xx0, yy0, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)},
-        {xx1, yy1, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)},
-        {xx2, yy2, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)}
+        coords[i].x = 2.0f * (coords[i].x - 0.5f) / vp.Width - 1.0f;
+        coords[i].y = 1.0f - 2.0f * (coords[i].y - 0.5f) / vp.Height;
+    }
+}
+
+void DrawManager::DrawTriangle(const XMFLOAT2& point1, const XMFLOAT2& point2, const XMFLOAT2& point3) const
+{
+    constexpr int pointsCount{ 3 };
+
+    XMFLOAT2 points[pointsCount]
+    {
+        {point1}, {point2}, {point3}
+    };
+
+    TransformCoords(points, pointsCount);
+
+    const auto color{ D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f) };
+    const VERTEX vertices[pointsCount]
+    {
+        {points[0].x, points[0].y, 0.0f, color},
+        {points[1].x, points[1].y, 0.0f, color},
+        {points[2].x, points[2].y, 0.0f, color}
     };
 
     // copy the vertices into the buffer
     D3D11_MAPPED_SUBRESOURCE ms;
-    m_devCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
+    m_pDevCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
     memcpy(ms.pData, vertices, sizeof(vertices));
-    m_devCon->Unmap(m_pVBuffer, NULL);
+    m_pDevCon->Unmap(m_pVBuffer, NULL);
 
-    m_devCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    m_pDevCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     // draw the vertex buffer to the back buffer
-    m_devCon->Draw(3, 0);
+    m_pDevCon->Draw(pointsCount, 0);
 }
 
-void DrawManager::DrawLine(const XMFLOAT2 pos1, const XMFLOAT2 pos2) const
+void DrawManager::DrawLine(const XMFLOAT2 point1, const XMFLOAT2 point2) const
 {
-    // TODO: reuse logic
-    UINT viewportNumber{ 1 };
-    D3D11_VIEWPORT vp;
-    this->m_devCon->RSGetViewports(&viewportNumber, &vp);
+    constexpr int pointsCount{ 2 };
 
-    // TODO: reuse logic
-    const float xx0{ 2.0f * (pos1.x - 0.5f) / vp.Width - 1.0f };
-    const float yy0{ 1.0f - 2.0f * (pos1.y - 0.5f) / vp.Height };
-    const float xx1{ 2.0f * (pos2.x - 0.5f) / vp.Width - 1.0f };
-    const float yy1{ 1.0f - 2.0f * (pos2.y - 0.5f) / vp.Height };
-
-    const VERTEX vertices[2]
+    XMFLOAT2 points[pointsCount]
     {
-        {xx0, yy0, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)},
-        {xx1, yy1, 0.0f, D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f)}
+        {point1}, {point2}
+    };
+
+    TransformCoords(points, pointsCount);
+
+    const auto color{ D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f) };
+    const VERTEX vertices[pointsCount]
+    {
+        {points[0].x, points[0].y, 0.0f, color},
+        {points[1].x, points[1].y, 0.0f, color}
     };
 
     // copy the vertices into the buffer
     D3D11_MAPPED_SUBRESOURCE ms;
-    m_devCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
+    m_pDevCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
     memcpy(ms.pData, vertices, sizeof(vertices));
-    m_devCon->Unmap(m_pVBuffer, NULL);
+    m_pDevCon->Unmap(m_pVBuffer, NULL);
 
-    m_devCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINELIST);
+    m_pDevCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINELIST);
 
     // draw the vertex buffer to the back buffer
-    m_devCon->Draw(2, 0);
+    m_pDevCon->Draw(pointsCount, 0);
 }
 
 void DrawManager::DrawBorderBox(XMFLOAT2 topLeft, XMFLOAT2 topRight, XMFLOAT2 botRight, XMFLOAT2 BotLeft) const
 {
+    //TODO: it's clean but is it optimal?
     DrawLine(topLeft, topRight);
     DrawLine(topRight, botRight);
     DrawLine(botRight, BotLeft);
@@ -350,12 +359,12 @@ void DrawManager::InitPipeline()
     D3DX11CompileFromFile("shaders.shader", nullptr, nullptr, "PShader", "ps_4_0", 0, 0, nullptr, &PS, nullptr, nullptr);
 
     // encapsulate both shaders into shader objects
-    m_dev->CreateVertexShader(VS->GetBufferPointer(), VS->GetBufferSize(), nullptr, &m_pVS);
-    m_dev->CreatePixelShader(PS->GetBufferPointer(), PS->GetBufferSize(), nullptr, &m_pPS);
+    m_pDev->CreateVertexShader(VS->GetBufferPointer(), VS->GetBufferSize(), nullptr, &m_pVS);
+    m_pDev->CreatePixelShader(PS->GetBufferPointer(), PS->GetBufferSize(), nullptr, &m_pPS);
 
     // set the shader objects
-    m_devCon->VSSetShader(m_pVS, nullptr, 0);
-    m_devCon->PSSetShader(m_pPS, nullptr, 0);
+    m_pDevCon->VSSetShader(m_pVS, nullptr, 0);
+    m_pDevCon->PSSetShader(m_pPS, nullptr, 0);
 
     // create the input layout object
     D3D11_INPUT_ELEMENT_DESC ied[] =
@@ -364,8 +373,8 @@ void DrawManager::InitPipeline()
         {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
 
-    m_dev->CreateInputLayout(ied, 2, VS->GetBufferPointer(), VS->GetBufferSize(), &m_pLayout);
-    m_devCon->IASetInputLayout(m_pLayout);
+    m_pDev->CreateInputLayout(ied, 2, VS->GetBufferPointer(), VS->GetBufferSize(), &m_pLayout);
+    m_pDevCon->IASetInputLayout(m_pLayout);
 
     // create the vertex buffer
     D3D11_BUFFER_DESC bd;
@@ -376,10 +385,10 @@ void DrawManager::InitPipeline()
     bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;       // use as a vertex buffer
     bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;    // allow CPU to write in buffer
 
-    m_dev->CreateBuffer(&bd, nullptr, &m_pVBuffer);       // create the buffer
+    m_pDev->CreateBuffer(&bd, nullptr, &m_pVBuffer);       // create the buffer
 
     // select which vertex buffer to display
     UINT stride = sizeof(VERTEX);
     UINT offset = 0;
-    m_devCon->IASetVertexBuffers(0, 1, &m_pVBuffer, &stride, &offset);
+    m_pDevCon->IASetVertexBuffers(0, 1, &m_pVBuffer, &stride, &offset);
 }
