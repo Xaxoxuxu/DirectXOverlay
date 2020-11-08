@@ -1,6 +1,6 @@
 #include <thread>
 #include <conio.h>
-#include "DrawManager.h"
+#include "../DirectXOverlay/DrawManager.h"
 
 XMFLOAT2 pos1{ 100.0f, 100.0f }, pos2{ 200.0f, 200.0f };
 
@@ -11,7 +11,6 @@ void InitDraw(const bool& terminate)
     XMFLOAT2 posT1{ 300.0f, 300.0f };
     XMFLOAT2 posT3{ posT1.x - 200.0f, 500.0f };
     XMFLOAT2 posT2{ posT1.x + 200.0f, 500.0f };
-
 
     XMFLOAT2 posB1{ 500.0f, 500.0f };
     XMFLOAT2 posB2{ 500.0f + 100.0f, 500.0f };

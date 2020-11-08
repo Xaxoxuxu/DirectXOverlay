@@ -12,6 +12,8 @@
 #include <chrono>
 #include <thread>
 #include <DirectXMath.h>
+#include <D3DCompiler.h>
+#include "Effects.h"
 
 // include the Direct3D Library file
 #pragma comment (lib, "d3d11.lib")
@@ -28,10 +30,10 @@ private:
     ID3D11Device* m_pDev{ nullptr };                     // the pointer to our Direct3D device interface
     ID3D11DeviceContext* m_pDevCon{ nullptr };           // the pointer to our Direct3D device context
     ID3D11RenderTargetView* m_pBackBuffer{ nullptr };    // the pointer to our back buffer
-    ID3D11InputLayout* m_pLayout{ nullptr };            // the pointer to the input layout
-    ID3D11VertexShader* m_pVS{ nullptr };               // the pointer to the vertex shader
-    ID3D11PixelShader* m_pPS{ nullptr };                // the pointer to the pixel shader
-    ID3D11Buffer* m_pVBuffer{ nullptr };                // the pointer to the vertex buffer
+    ID3D11InputLayout* m_pLayout{ nullptr };             // the pointer to the input layout
+    ID3D11VertexShader* m_pVS{ nullptr };                // the pointer to the vertex shader
+    ID3D11PixelShader* m_pPS{ nullptr };                 // the pointer to the pixel shader
+    ID3D11Buffer* m_pVBuffer{ nullptr };                 // the pointer to the vertex buffer
 
     renderCallbackFn m_callbackFn{ nullptr };
     HWND m_windowHandle{ nullptr };

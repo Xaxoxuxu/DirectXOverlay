@@ -27,6 +27,7 @@ void DrawManager::InitOverlay(const bool& terminate)
         }
 
         RenderFrame();
+        //TODO: adjust
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 
@@ -342,7 +343,7 @@ void DrawManager::DrawBorderBox(const XMFLOAT2 &topLeft, const XMFLOAT2 &topRigh
     DrawLine(botLeft, topLeft);
 }
 
-void DrawManager::SetCallback(const renderCallbackFn callback)
+void DrawManager::SetCallback(renderCallbackFn callback)
 {
     if (callback)
     {
@@ -355,8 +356,10 @@ void DrawManager::InitPipeline()
 {
     // load and compile the two shaders
     ID3D10Blob* VS, * PS;
-    D3DX11CompileFromFile("shaders.shader", nullptr, nullptr, "VShader", "vs_4_0", 0, 0, nullptr, &VS, nullptr, nullptr);
-    D3DX11CompileFromFile("shaders.shader", nullptr, nullptr, "PShader", "ps_4_0", 0, 0, nullptr, &PS, nullptr, nullptr);
+    D3DX11CompileFromMemory(VertexShader, sizeof(VertexShader), nullptr, nullptr, nullptr, "VS", "vs_4_0",
+                            D3DCOMPILE_ENABLE_STRICTNESS, 0, nullptr, &VS, nullptr, nullptr);
+    D3DX11CompileFromMemory(PixelShader, sizeof(PixelShader), nullptr, nullptr, nullptr, "PS", "ps_4_0",
+                            D3DCOMPILE_ENABLE_STRICTNESS, 0, nullptr, &PS, nullptr, nullptr);
 
     // encapsulate both shaders into shader objects
     m_pDev->CreateVertexShader(VS->GetBufferPointer(), VS->GetBufferSize(), nullptr, &m_pVS);
