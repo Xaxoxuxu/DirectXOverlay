@@ -6,7 +6,7 @@ XMFLOAT2 pos1{ 100.0f, 100.0f }, pos2{ 200.0f, 200.0f };
 
 void InitDraw(const bool& terminate)
 {
-    DrawManager draw{ "League of Legends (TM) Client" };
+    DrawManager draw{ "Untitled - Notepad" };
 
     XMFLOAT2 posT1{ 300.0f, 300.0f };
     XMFLOAT2 posT3{ posT1.x - 200.0f, 500.0f };
@@ -22,7 +22,7 @@ void InitDraw(const bool& terminate)
             draw.DrawTriangle(posT1, posT2, posT3);
             draw.DrawLine(pos1, pos2);
             draw.DrawBorderBox(posB1, posB2, posB3, posB4);
-            draw.DrawCircle({ 600.0f, 600.0f }, 50.0f, 20);
+            draw.DrawCircle({ 600.0f, 600.0f }, 50, 20);
         });
 
     draw.InitOverlay(terminate);
@@ -32,6 +32,7 @@ void InitDraw(const bool& terminate)
 #define KEY_DOWN 80
 #define KEY_LEFT 75
 #define KEY_RIGHT 77
+
 int main()
 {
     bool terminate{ false };

@@ -8,20 +8,21 @@
 #include <D3DX11.h>
 #include <D3DX10.h>
 #include <functional>
-#include <random>
 #include <chrono>
 #include <thread>
 #include <DirectXMath.h>
 #include <D3DCompiler.h>
 #include "Effects.h"
+#include "Utils.h"
+#include "XorStr.h"
 
-// include the Direct3D Library file
 #pragma comment (lib, "d3d11.lib")
 #pragma comment (lib, "d3dx11.lib")
 #pragma comment (lib, "d3dx10.lib")
 
 using renderCallbackFn = std::function<void()>;
 using DirectX::XMFLOAT2;
+using DirectX::XMFLOAT3;
 
 class DrawManager
 {
@@ -42,12 +43,11 @@ private:
     uint32_t m_overlayHeight{ 0 };
 
     void InitD3D();               // sets up and initializes Direct3D
-    void RenderFrame();           // renders a single frame
+    void RenderFrame() const;     // renders a single frame
     void CleanD3D() const;        // closes Direct3D and releases memory
     void InitPipeline();          // loads and prepares the shaders
     void Scale();
     void InitWindow();            // initializes window and message loop
-    void TransformCoords(XMFLOAT2 coords[], size_t count) const;
     template<typename T = RECT>
     static T GetWindowProps(HWND hWnd);
 
@@ -55,15 +55,17 @@ private:
     static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 public:
-    DrawManager(const std::string& windowToOverlayName);
+    explicit DrawManager(const std::string& windowToOverlayName);
 
     // a struct to define a single vertex
     struct VERTEX { FLOAT x{}, y{}, z{}; D3DXCOLOR color; };
+    inline static D3DXCOLOR WHITE{ 1.0f, 1.0f, 1.0f, 1.0f };
 
     void InitOverlay(const bool& terminate);
-    void DrawTriangle(const XMFLOAT2 &point1, const XMFLOAT2 &point2, const XMFLOAT2 &point3) const;
-    void DrawLine(const XMFLOAT2 &point1, const XMFLOAT2 &point2) const;
-    void DrawBorderBox(const XMFLOAT2 &topLeft, const XMFLOAT2 &topRight, const XMFLOAT2 &botRight, const XMFLOAT2 &botLeft) const;
-    void DrawCircle(const XMFLOAT2& centerPoint, int radius, int numSides) const;
+    void DrawTriangle(const XMFLOAT2& point1, const XMFLOAT2& point2, const XMFLOAT2& point3, const D3DXCOLOR& col = WHITE) const;
+    void DrawLine(const XMFLOAT2& point1, const XMFLOAT2& point2, const D3DXCOLOR& col = WHITE) const;
+    void DrawBorderBox(const XMFLOAT2& topLeft, const XMFLOAT2& topRight, const XMFLOAT2& botRight, const XMFLOAT2& botLeft, const D3DXCOLOR& col = WHITE) const;
+    void DrawCircle(const XMFLOAT2& centerPoint, int radius, const D3DXCOLOR& col = WHITE) const;
     void SetCallback(renderCallbackFn callback);
+    void DrawLines(const XMFLOAT2 points[], const int& pointsCount, const D3DXCOLOR& col = WHITE) const;
 };

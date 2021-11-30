@@ -5,7 +5,7 @@ DrawManager::DrawManager(const std::string& windowToOverlayName)
     const HWND tempHandle{ FindWindow(nullptr, windowToOverlayName.c_str()) };
     if (!tempHandle)
     {
-        throw std::exception("Cannot find target window");
+        throw std::exception(xor ("Cannot find target window"));
     }
     this->m_targetWindowHwnd = tempHandle;
 }
@@ -27,7 +27,7 @@ void DrawManager::InitOverlay(const bool& terminate)
         }
 
         RenderFrame();
-        //TODO: adjust, but overall a higher value is better because we get ingame fps drops
+        // TODO: adjust, but overall a higher value is better because we get ingame fps drops
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
@@ -39,7 +39,7 @@ T DrawManager::GetWindowProps(const HWND hWnd)
 {
     if (!hWnd)
     {
-        throw std::exception("Invalid window handle");
+        throw std::exception(xor ("Invalid window handle"));
     }
 
     RECT client{}, window{};
@@ -92,6 +92,8 @@ void DrawManager::Scale()
     );
 }
 
+// TODO: Randomize executable name at runtime along with the window name
+// TODO: Change size of overlay window by a few pixels from the game window
 void DrawManager::InitWindow()
 {
     const auto randomString = [](const std::size_t length)
@@ -106,14 +108,10 @@ void DrawManager::InitWindow()
         };
         constexpr static std::size_t num_chars{ sizeof charset };
 
-        static std::random_device rd;
-        std::mt19937 gen(rd());
-        const std::uniform_int_distribution<std::size_t> engine(std::numeric_limits<std::size_t>::min(), num_chars - 1);
-
         std::string str(length, '\0');
         for (auto& c : str)
         {
-            c = charset[engine(gen)];
+            c = charset[Utils::GetRandomInteger(0, num_chars - 1)];
         }
 
         return str;
@@ -160,13 +158,10 @@ void DrawManager::InitWindow()
 
 LRESULT CALLBACK DrawManager::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    switch (message)
-    {
-    case WM_DESTROY:
+    if (message == WM_DESTROY)
     {
         PostQuitMessage(0);
         return 0;
-    } break;
     }
 
     return DefWindowProc(hWnd, message, wParam, lParam);
@@ -229,13 +224,13 @@ void DrawManager::InitD3D()
 }
 
 // this is the function used to render a single frame
-void DrawManager::RenderFrame()
+void DrawManager::RenderFrame() const
 {
     if (m_callbackFn)
     {
         m_pDevCon->ClearRenderTargetView(m_pBackBuffer, D3DXCOLOR(0.0f, 0.0f, 0.0f, 0.0f));
 
-        Scale();
+        //Scale();
 
         m_callbackFn();
 
@@ -260,42 +255,33 @@ void DrawManager::CleanD3D() const
     m_pDevCon->Release();
 }
 
-void DrawManager::TransformCoords(XMFLOAT2 coords[], size_t count) const
-{
-    UINT viewportNumber{ 1 };
-    D3D11_VIEWPORT vp;
-    this->m_pDevCon->RSGetViewports(&viewportNumber, &vp);
-
-    for (size_t i{ 0 }; i < count; i++)
-    {
-        coords[i].x = 2.0f * (coords[i].x - 0.5f) / vp.Width - 1.0f;
-        coords[i].y = 1.0f - 2.0f * (coords[i].y - 0.5f) / vp.Height;
-    }
-}
-
-void DrawManager::DrawTriangle(const XMFLOAT2& point1, const XMFLOAT2& point2, const XMFLOAT2& point3) const
+void DrawManager::DrawTriangle(const XMFLOAT2& point1, const XMFLOAT2& point2, const XMFLOAT2& point3, const D3DXCOLOR& col) const
 {
     constexpr int pointsCount{ 3 };
 
-    XMFLOAT2 points[pointsCount]
-    {
-        {point1}, {point2}, {point3}
-    };
+    UINT viewportNumber{ 1 };
+    D3D11_VIEWPORT vp;
+    m_pDevCon->RSGetViewports(&viewportNumber, &vp);
 
-    TransformCoords(points, pointsCount);
+    const auto color{ col };
 
-    const auto color{ D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f) };
-    const VERTEX vertices[pointsCount]
-    {
-        {points[0].x, points[0].y, 0.0f, color},
-        {points[1].x, points[1].y, 0.0f, color},
-        {points[2].x, points[2].y, 0.0f, color}
-    };
+    D3D11_MAPPED_SUBRESOURCE mapData;
+    m_pDevCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &mapData);
 
-    // copy the vertices into the buffer
-    D3D11_MAPPED_SUBRESOURCE ms;
-    m_pDevCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
-    memcpy(ms.pData, vertices, sizeof(vertices));
+    VERTEX* vertex{ static_cast<VERTEX*>(mapData.pData) };
+    vertex[0].x = 2.0f * (point1.x - 0.5f) / vp.Width - 1.0f;
+    vertex[0].y = 1.0f - 2.0f * (point1.y - 0.5f) / vp.Height;
+    vertex[0].z = 0.0f;
+    vertex[0].color = color;
+    vertex[1].x = 2.0f * (point2.x - 0.5f) / vp.Width - 1.0f;
+    vertex[1].y = 1.0f - 2.0f * (point2.y - 0.5f) / vp.Height;
+    vertex[1].z = 0.0f;
+    vertex[1].color = color;
+    vertex[2].x = 2.0f * (point3.x - 0.5f) / vp.Width - 1.0f;
+    vertex[2].y = 1.0f - 2.0f * (point3.y - 0.5f) / vp.Height;
+    vertex[2].z = 0.0f;
+    vertex[2].color = color;
+
     m_pDevCon->Unmap(m_pVBuffer, NULL);
 
     m_pDevCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -304,28 +290,29 @@ void DrawManager::DrawTriangle(const XMFLOAT2& point1, const XMFLOAT2& point2, c
     m_pDevCon->Draw(pointsCount, 0);
 }
 
-void DrawManager::DrawLine(const XMFLOAT2& point1, const XMFLOAT2& point2) const
+void DrawManager::DrawLine(const XMFLOAT2& point1, const XMFLOAT2& point2, const D3DXCOLOR& col) const
 {
     constexpr int pointsCount{ 2 };
 
-    XMFLOAT2 points[pointsCount]
-    {
-        {point1}, {point2}
-    };
+    UINT viewportNumber{ 1 };
+    D3D11_VIEWPORT vp;
+    m_pDevCon->RSGetViewports(&viewportNumber, &vp);
 
-    TransformCoords(points, pointsCount);
+    const auto color{ col };
 
-    const auto color{ D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f) };
-    const VERTEX vertices[pointsCount]
-    {
-        {points[0].x, points[0].y, 0.0f, color},
-        {points[1].x, points[1].y, 0.0f, color}
-    };
+    D3D11_MAPPED_SUBRESOURCE mapData;
+    m_pDevCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &mapData);
 
-    // copy the vertices into the buffer
-    D3D11_MAPPED_SUBRESOURCE ms;
-    m_pDevCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &ms);
-    memcpy(ms.pData, vertices, sizeof(vertices));
+    VERTEX* vertex{ static_cast<VERTEX*>(mapData.pData) };
+    vertex[0].x = 2.0f * (point1.x - 0.5f) / vp.Width - 1.0f;
+    vertex[0].y = 1.0f - 2.0f * (point1.y - 0.5f) / vp.Height;
+    vertex[0].z = 0.0f;
+    vertex[0].color = color;
+    vertex[1].x = 2.0f * (point2.x - 0.5f) / vp.Width - 1.0f;
+    vertex[1].y = 1.0f - 2.0f * (point2.y - 0.5f) / vp.Height;
+    vertex[1].z = 0.0f;
+    vertex[1].color = color;
+
     m_pDevCon->Unmap(m_pVBuffer, NULL);
 
     m_pDevCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINELIST);
@@ -334,33 +321,59 @@ void DrawManager::DrawLine(const XMFLOAT2& point1, const XMFLOAT2& point2) const
     m_pDevCon->Draw(pointsCount, 0);
 }
 
-void DrawManager::DrawBorderBox(const XMFLOAT2& topLeft, const XMFLOAT2& topRight, const XMFLOAT2& botRight, const XMFLOAT2& botLeft) const
+void DrawManager::DrawLines(const XMFLOAT2 points[], const int& pointsCount, const D3DXCOLOR& col) const
 {
-    //TODO: it's clean but is it optimal?
-    DrawLine(topLeft, topRight);
-    DrawLine(topRight, botRight);
-    DrawLine(botRight, botLeft);
-    DrawLine(botLeft, topLeft);
+    UINT viewportNumber{ 1 };
+    D3D11_VIEWPORT vp;
+    m_pDevCon->RSGetViewports(&viewportNumber, &vp);
+
+    const auto color{ col };
+
+    D3D11_MAPPED_SUBRESOURCE mapData;
+    m_pDevCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &mapData);
+
+    VERTEX* const vertex{ static_cast<VERTEX*>(mapData.pData) };
+    for (int i{ 0 }; i < pointsCount; i++)
+    {
+        vertex[i].x = 2.0f * (points[i].x - 0.5f) / vp.Width - 1.0f;
+        vertex[i].y = 1.0f - 2.0f * (points[i].y - 0.5f) / vp.Height;
+        vertex[i].z = 0.0f;
+        vertex[i].color = color;
+    }
+
+    m_pDevCon->Unmap(m_pVBuffer, NULL);
+
+    m_pDevCon->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP);
+
+    // draw the vertex buffer to the back buffer
+    m_pDevCon->Draw(pointsCount, 0);
 }
 
-void DrawManager::DrawCircle(const XMFLOAT2& centerPoint, int radius, int numSides) const
+void DrawManager::DrawBorderBox(const XMFLOAT2& topLeft, const XMFLOAT2& topRight, const XMFLOAT2& botRight, const XMFLOAT2& botLeft, const D3DXCOLOR& col) const
 {
-    constexpr int numPoints{ 30 };
+    DrawLine(topLeft, topRight, col);
+    DrawLine(topRight, botRight, col);
+    DrawLine(botRight, botLeft, col);
+    DrawLine(botLeft, topLeft, col);
+}
+
+void DrawManager::DrawCircle(const XMFLOAT2& centerPoint, int radius, const D3DXCOLOR& col) const
+{
+    constexpr int numPoints{ 60 };
     UINT viewportNumber{ 1 };
     D3D11_VIEWPORT vp;
     this->m_pDevCon->RSGetViewports(&viewportNumber, &vp);
 
-    const auto color{ D3DXCOLOR(0.0f, 1.0f, 1.0f, 1.0f) };
-    VERTEX* v{ nullptr };
+    const auto color{ col };
 
     D3D11_MAPPED_SUBRESOURCE mapData;
     this->m_pDevCon->Map(m_pVBuffer, NULL, D3D11_MAP_WRITE_DISCARD, NULL, &mapData);
 
-    v = static_cast<VERTEX*>(mapData.pData);
+    VERTEX* v = static_cast<VERTEX*>(mapData.pData);
 
-    const auto wedgeAngle {static_cast<float>((2 * D3DX_PI) / numPoints)};
+    const auto wedgeAngle{ static_cast<float>((2 * D3DX_PI) / numPoints) };
 
-    for (int i = 0; i <= numPoints; i++)
+    for (int i = 0; i < numPoints + 1; i++)
     {
         const auto theta{ static_cast<float>(i * wedgeAngle) };
         const auto x{ static_cast<float>(centerPoint.x + radius * cos(theta)) };
@@ -406,8 +419,8 @@ void DrawManager::InitPipeline()
     // create the input layout object
     D3D11_INPUT_ELEMENT_DESC ied[] =
     {
-        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        { xor ("POSITION"), 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        { xor ("COLOR"), 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
 
     m_pDev->CreateInputLayout(ied, 2, VS->GetBufferPointer(), VS->GetBufferSize(), &m_pLayout);
@@ -415,10 +428,10 @@ void DrawManager::InitPipeline()
 
     // create the vertex buffer
     D3D11_BUFFER_DESC bd;
-    ZeroMemory(&bd, sizeof(bd));
+	ZeroMemory(&bd, sizeof(bd));
 
     bd.Usage = D3D11_USAGE_DYNAMIC;                // write access access by CPU and GPU
-    bd.ByteWidth = sizeof(VERTEX) * 1000;          // ?
+    bd.ByteWidth = sizeof(VERTEX) * 2000;          // ?
     bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;       // use as a vertex buffer
     bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;    // allow CPU to write in buffer
 
